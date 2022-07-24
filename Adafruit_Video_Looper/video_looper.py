@@ -51,39 +51,47 @@ class VideoLooper:
         # Load the configuration.
         self._config = configparser.ConfigParser()
         if len(self._config.read(config_path)) == 0:
-            raise RuntimeError('Failed to find configuration file at {0}, is the application properly installed?'.format(config_path))
-        self._console_output = self._config.getboolean('video_looper', 'console_output')
+            raise RuntimeError(
+                'Failed to find configuration file at {0}, is the application properly installed?'.format(config_path))
+        self._console_output = self._config.getboolean(
+            'video_looper', 'console_output')
         # Load other configuration values.
         self._osd = self._config.getboolean('video_looper', 'osd')
         self._is_random = self._config.getboolean('video_looper', 'is_random')
-        self._resume_playlist = self._config.getboolean('video_looper', 'resume_playlist') 
-        self._keyboard_control = self._config.getboolean('video_looper', 'keyboard_control')
+        self._resume_playlist = self._config.getboolean(
+            'video_looper', 'resume_playlist')
+        self._keyboard_control = self._config.getboolean(
+            'video_looper', 'keyboard_control')
         self._copyloader = self._config.getboolean('copymode', 'copyloader')
         # Get seconds for countdown from config
-        self._countdown_time = self._config.getint('video_looper', 'countdown_time')
+        self._countdown_time = self._config.getint(
+            'video_looper', 'countdown_time')
         # Get seconds for waittime bewteen files from config
         self._wait_time = self._config.getint('video_looper', 'wait_time')
         # Parse string of 3 comma separated values like "255, 255, 255" into
         # list of ints for colors.
         self._bgcolor = list(map(int, self._config.get('video_looper', 'bgcolor')
-                                             .translate(str.maketrans('','', ','))
-                                             .split()))
+                                 .translate(str.maketrans('', '', ','))
+                                 .split()))
         self._fgcolor = list(map(int, self._config.get('video_looper', 'fgcolor')
-                                             .translate(str.maketrans('','', ','))
-                                             .split()))
+                                 .translate(str.maketrans('', '', ','))
+                                 .split()))
         # Initialize pygame and display a blank screen.
         pygame.display.init()
         pygame.font.init()
         pygame.mouse.set_visible(False)
-        self._screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN | pygame.NOFRAME)
-        self._size = (pygame.display.Info().current_w, pygame.display.Info().current_h)
-        self._bgimage = self._load_bgimage() #a tupple with pyimage, xpos, ypos
+        self._screen = pygame.display.set_mode(
+            (0, 0), pygame.FULLSCREEN | pygame.NOFRAME)
+        self._size = (pygame.display.Info().current_w,
+                      pygame.display.Info().current_h)
+        self._bgimage = self._load_bgimage()  # a tupple with pyimage, xpos, ypos
         self._blank_screen()
         # Load configured video player and file reader modules.
         self._player = self._load_player()
         self._reader = self._load_file_reader()
         # Load ALSA hardware configuration.
-        self._alsa_hw_device = parse_hw_device(self._config.get('alsa', 'hw_device'))
+        self._alsa_hw_device = parse_hw_device(
+            self._config.get('alsa', 'hw_device'))
         self._alsa_hw_vol_control = self._config.get('alsa', 'hw_vol_control')
         self._alsa_hw_vol_file = self._config.get('alsa', 'hw_vol_file')
         # default ALSA hardware volume (volume will not be changed)
@@ -95,16 +103,17 @@ class VideoLooper:
         # Set other static internal state.
         self._extensions = '|'.join(self._player.supported_extensions())
         self._small_font = pygame.font.Font(None, 50)
-        self._big_font   = pygame.font.Font(None, 250)
-        self._running    = True
+        self._big_font = pygame.font.Font(None, 250)
+        self._running = True
         self._playbackStopped = False
-        #used for not waiting the first time
+        # used for not waiting the first time
         self._firstStart = True
 
         # start keyboard handler thread:
         # Event handling for key press, if keyboard control is enabled
         if self._keyboard_control:
-            self._keyboard_thread = threading.Thread(target=self._handle_keyboard_shortcuts, daemon=True)
+            self._keyboard_thread = threading.Thread(
+                target=self._handle_keyboard_shortcuts, daemon=True)
             self._keyboard_thread.start()
 
     def _print(self, message):
@@ -144,13 +153,15 @@ class VideoLooper:
                 if screen_aspect_ratio < photo_aspect_ratio:  # Width is binding
                     new_image_w = screen_w
                     new_image_h = int(new_image_w / photo_aspect_ratio)
-                    image = pygame.transform.scale(image, (new_image_w, new_image_h))
+                    image = pygame.transform.scale(
+                        image, (new_image_w, new_image_h))
                     image_y = (screen_h - new_image_h) // 2
 
                 elif screen_aspect_ratio > photo_aspect_ratio:  # Height is binding
                     new_image_h = screen_h
                     new_image_w = int(new_image_h * photo_aspect_ratio)
-                    image = pygame.transform.scale(image, (new_image_w, new_image_h))
+                    image = pygame.transform.scale(
+                        image, (new_image_w, new_image_h))
                     image_x = (screen_w - new_image_w) // 2
 
                 else:  # Images have the same aspect ratio
@@ -160,7 +171,7 @@ class VideoLooper:
 
     def _is_number(self, s):
         try:
-            float(s) 
+            float(s)
             return True
         except ValueError:
             return False
@@ -174,23 +185,26 @@ class VideoLooper:
             if playlist_path != "":
                 if os.path.isabs(playlist_path):
                     if not os.path.isfile(playlist_path):
-                        self._print('Playlist path {0} does not exist.'.format(playlist_path))
+                        self._print(
+                            'Playlist path {0} does not exist.'.format(playlist_path))
                         return self._build_playlist_from_all_files()
                         #raise RuntimeError('Playlist path {0} does not exist.'.format(playlist_path))
                 else:
                     paths = self._reader.search_paths()
-                    
+
                     if not paths:
                         return Playlist([])
-                    
+
                     for path in paths:
                         maybe_playlist_path = os.path.join(path, playlist_path)
                         if os.path.isfile(maybe_playlist_path):
                             playlist_path = maybe_playlist_path
-                            self._print('Playlist path resolved to {0}.'.format(playlist_path))
+                            self._print(
+                                'Playlist path resolved to {0}.'.format(playlist_path))
                             break
                     else:
-                        self._print('Playlist path {0} does not resolve to any file.'.format(playlist_path))
+                        self._print(
+                            'Playlist path {0} does not resolve to any file.'.format(playlist_path))
                         return self._build_playlist_from_all_files()
                         #raise RuntimeError('Playlist path {0} does not resolve to any file.'.format(playlist_path))
 
@@ -198,7 +212,8 @@ class VideoLooper:
                 if extension == '.m3u' or extension == '.m3u8':
                     return build_playlist_m3u(playlist_path)
                 else:
-                    self._print('Unrecognized playlist format {0}.'.format(extension))
+                    self._print(
+                        'Unrecognized playlist format {0}.'.format(extension))
                     return self._build_playlist_from_all_files()
                     #raise RuntimeError('Unrecognized playlist format {0}.'.format(extension))
             else:
@@ -222,25 +237,29 @@ class VideoLooper:
             for x in os.listdir(path):
                 # Ignore hidden files (useful when file loaded on usb key from an OSX computer
                 if x[0] != '.' and re.search('\.({0})$'.format(self._extensions), x, flags=re.IGNORECASE):
-                    repeatsetting = re.search('_repeat_([0-9]*)x', x, flags=re.IGNORECASE)
+                    repeatsetting = re.search(
+                        '_repeat_([0-9]*)x', x, flags=re.IGNORECASE)
                     if (repeatsetting is not None):
                         repeat = repeatsetting.group(1)
                     else:
                         repeat = 1
                     basename, extension = os.path.splitext(x)
-                    movies.append(Movie('{0}/{1}'.format(path.rstrip('/'), x), basename, repeat))
+                    movies.append(
+                        Movie('{0}/{1}'.format(path.rstrip('/'), x), basename, repeat))
 
             # Get the ALSA hardware volume from the file in the usb key
             if self._alsa_hw_vol_file:
-                alsa_hw_vol_file_path = '{0}/{1}'.format(path.rstrip('/'), self._alsa_hw_vol_file)
+                alsa_hw_vol_file_path = '{0}/{1}'.format(
+                    path.rstrip('/'), self._alsa_hw_vol_file)
                 if os.path.exists(alsa_hw_vol_file_path):
                     with open(alsa_hw_vol_file_path, 'r') as alsa_hw_vol_file:
                         alsa_hw_vol_string = alsa_hw_vol_file.readline()
                         self._alsa_hw_vol = alsa_hw_vol_string
-                    
+
             # Get the video volume from the file in the usb key
             if self._sound_vol_file:
-                sound_vol_file_path = '{0}/{1}'.format(path.rstrip('/'), self._sound_vol_file)
+                sound_vol_file_path = '{0}/{1}'.format(
+                    path.rstrip('/'), self._sound_vol_file)
                 if os.path.exists(sound_vol_file_path):
                     with open(sound_vol_file_path, 'r') as sound_file:
                         sound_vol_string = sound_file.readline()
@@ -253,7 +272,8 @@ class VideoLooper:
         """Render a blank screen filled with the background color and optional the background image."""
         self._screen.fill(self._bgcolor)
         if self._bgimage[0] is not None:
-            self._screen.blit(self._bgimage[0], (self._bgimage[1], self._bgimage[2]))
+            self._screen.blit(
+                self._bgimage[0], (self._bgimage[1], self._bgimage[2]))
         pygame.display.flip()
 
     def _render_text(self, message, font=None):
@@ -270,8 +290,8 @@ class VideoLooper:
         message if the on screen display is enabled.
         """
         # Print message to console with number of media files in playlist.
-        message = 'Found {0} media file{1}.'.format(playlist.length(), 
-            's' if playlist.length() >= 2 else '')
+        message = 'Found {0} media file{1}.'.format(playlist.length(),
+                                                    's' if playlist.length() >= 2 else '')
         self._print(message)
         # Do nothing else if the OSD is turned off.
         if not self._osd:
@@ -288,7 +308,8 @@ class VideoLooper:
             # Clear screen and draw text with line1 above line2 and all
             # centered horizontally and vertically.
             self._screen.fill(self._bgcolor)
-            self._screen.blit(label1, (round(sw/2-l1w/2), round(sh/2-l2h/2-l1h)))
+            self._screen.blit(
+                label1, (round(sw/2-l1w/2), round(sh/2-l2h/2-l1h)))
             self._screen.blit(label2, (round(sw/2-l2w/2), round(sh/2-l2h/2)))
             pygame.display.update()
             # Pause for a second between each frame.
@@ -315,7 +336,7 @@ class VideoLooper:
             self._screen.blit(label2, (sw/2-l2w/2, sh/2-l2h/2+lh))
         pygame.display.update()
 
-    def display_message(self,message):
+    def display_message(self, message):
         self._print(message)
         # Do nothing else if the OSD is turned off.
         if not self._osd:
@@ -351,9 +372,10 @@ class VideoLooper:
             cmd = ['amixer', '-M']
             if self._alsa_hw_device != None:
                 cmd.extend(('-c', str(self._alsa_hw_device[0])))
-            cmd.extend(('set', self._alsa_hw_vol_control, '--', self._alsa_hw_vol))
+            cmd.extend(('set', self._alsa_hw_vol_control,
+                       '--', self._alsa_hw_vol))
             subprocess.check_call(cmd)
-            
+
     def _handle_keyboard_shortcuts(self):
         while self._running:
             event = pygame.event.wait()
@@ -376,8 +398,6 @@ class VideoLooper:
                 if event.key == pygame.K_p:
                     self._print("p was pressed. shutting down...")
                     self.quit(True)
-                    
-
 
     def run(self):
         """Main program loop.  Will never return!"""
@@ -390,55 +410,63 @@ class VideoLooper:
         while self._running:
             # Load and play a new movie if nothing is playing.
             if not self._player.is_playing() and not self._playbackStopped:
-                if movie is not None: #just to avoid errors
+                if movie is not None:  # just to avoid errors
 
                     if movie.playcount >= movie.repeats:
                         movie.clear_playcount()
-                        movie = playlist.get_next(self._is_random, self._resume_playlist)
+                        movie = playlist.get_next(
+                            self._is_random, self._resume_playlist)
                     elif self._player.can_loop_count() and movie.playcount > 0:
                         movie.clear_playcount()
-                        movie = playlist.get_next(self._is_random, self._resume_playlist)
+                        movie = playlist.get_next(
+                            self._is_random, self._resume_playlist)
 
                     movie.was_played()
 
                     if self._wait_time > 0 and not self._firstStart:
-                        self._print('Waiting for: {0} seconds'.format(self._wait_time))
+                        self._print(
+                            'Waiting for: {0} seconds'.format(self._wait_time))
                         time.sleep(self._wait_time)
                     self._firstStart = False
 
-                    #generating infotext
+                    # generating infotext
                     if self._player.can_loop_count():
-                        infotext = '{0} time{1} (player counts loops)'.format(movie.repeats, "s" if movie.repeats>1 else "")
+                        infotext = '{0} time{1} (player counts loops)'.format(
+                            movie.repeats, "s" if movie.repeats > 1 else "")
                     else:
-                        infotext = '{0}/{1}'.format(movie.playcount, movie.repeats)
-                    if playlist.length()==1:
+                        infotext = '{0}/{1}'.format(movie.playcount,
+                                                    movie.repeats)
+                    if playlist.length() == 1:
                         infotext = '(endless loop)'
 
                     # Start playing the first available movie.
-                    self._print('Playing movie: {0} {1}'.format(movie, infotext))
+                    self._print(
+                        'Playing movie: {0} {1}'.format(movie, infotext))
                     # todo: maybe clear screen to black so that background (image/color) is not visible for videos with a resolution that is < screen resolution
-                    self._player.play(movie, loop=-1 if playlist.length()==1 else None, vol = self._sound_vol)
+                    self._player.play(
+                        movie, loop=-1 if playlist.length() == 1 else None, vol=self._sound_vol)
 
             # Check for changes in the file search path (like USB drives added)
             # and rebuild the playlist.
             if self._reader.is_changed() and not self._playbackStopped:
                 self._print("reader changed, stopping player")
-                self._player.stop(3)  # Up to 3 second delay waiting for old 
-                                      # player to stop.
+                self._player.stop(3)  # Up to 3 second delay waiting for old
+                # player to stop.
                 self._print("player stopped")
                 # Rebuild playlist and show countdown again (if OSD enabled).
                 playlist = self._build_playlist()
-                #refresh background image
+                # refresh background image
                 if self._copyloader:
                     self._bgimage = self._load_bgimage()
                 self._prepare_to_run_playlist(playlist)
                 self._set_hardware_volume()
-                movie = playlist.get_next(self._is_random, self._resume_playlist)
+                movie = playlist.get_next(
+                    self._is_random, self._resume_playlist)
 
             # Give the CPU some time to do other tasks. low values increase "responsiveness to changes" and reduce the pause between files
             # but increase CPU usage
             # since keyboard commands are handled in a seperate thread this sleeptime mostly influences the pause between files
-                        
+
             time.sleep(0.002)
 
     def quit(self, shutdown=False):
@@ -452,25 +480,38 @@ class VideoLooper:
             os.system("sudo shutdown now")
         self._running = False
 
-
-
     def signal_quit(self, signal, frame):
         """Shut down the program, meant to by called by signal handler."""
         self._print("received signal to quit")
         self.quit()
+
 
 # Main entry point.
 if __name__ == '__main__':
     print('Starting Adafruit Video Looper.')
     # Default config path to /boot.
     config_path = '/boot/video_looper.ini'
+    config_path_dual = '/boot/video_looper_dual.ini'
+
     # Override config path if provided as parameter.
     if len(sys.argv) == 2:
         config_path = sys.argv[1]
+    elif len(sys.argv) == 3:
+        config_path = sys.argv[1]
+        config_path_dual = sys.argv[2]
+
     # Create video looper.
     videolooper = VideoLooper(config_path)
+    videolooper_dual = VideoLooper(config_path_dual)
+
     # Configure signal handlers to quit on TERM or INT signal.
     signal.signal(signal.SIGTERM, videolooper.signal_quit)
+    signal.signal(signal.SIGTERM, videolooper_dual.signal_quit)
     signal.signal(signal.SIGINT, videolooper.signal_quit)
+    signal.signal(signal.SIGINT, videolooper_dual.signal_quit)
     # Run the main loop.
-    videolooper.run()
+    hiloA = threading.Thread(videolooper.run())
+    # PUEDE QUE ESTO NO FUNCIONE run es un while por ende o modifico la funcion o hago dos trheads
+    hiloB = threading.Thread(videolooper_dual.run())
+    hiloA.start()
+    hiloB.start()
