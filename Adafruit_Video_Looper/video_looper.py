@@ -509,9 +509,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, videolooper_dual.signal_quit)
     signal.signal(signal.SIGINT, videolooper.signal_quit)
     signal.signal(signal.SIGINT, videolooper_dual.signal_quit)
-    # Run the main loop.
-    hiloA = threading.Thread(videolooper.run())
-    # PUEDE QUE ESTO NO FUNCIONE run es un while por ende o modifico la funcion o hago dos trheads
-    hiloB = threading.Thread(videolooper_dual.run())
+    # Run the threads in loop.
+    hiloA = threading.Thread(videolooper.run)
+    hiloB = threading.Thread(videolooper_dual.run)
     hiloA.start()
     hiloB.start()
